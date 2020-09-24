@@ -1,7 +1,7 @@
 """
 ICA is ~invariant to its own random seed up to permutation/flips (as
-demonstrated by the last experiment), but the marginals aren't sufficient to
-recover the permutation. Maybe we can do so with help of some joints?
+demonstrated by the last experiment); how much of the permutation matrix can
+we recover using only the distributions of the marginals in the latent space?
 """
 
 import numpy as np
