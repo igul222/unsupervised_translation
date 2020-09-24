@@ -25,7 +25,7 @@ np.random.shuffle(mnist.targets.numpy())
 X1 = (mnist.data.reshape((60000, 784)).float() / 256.).numpy()
 
 W = np.random.randn(784, 784)
-X2 = np.dot(X1, W)
+X2 = np.dot(X1, W.T)
 
 Z3 = np.random.laplace(size=(60000, 64))
 W = np.random.randn(64, 784)
