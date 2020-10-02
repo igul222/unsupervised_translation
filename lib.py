@@ -98,6 +98,13 @@ def save_image_grid(images, path):
     grid_image[j*height:j*height+height, i*width:i*width+width] = image
   plt.imsave(path, grid_image)
 
+def save_image_grid_mnist(samples, path):
+    samples = samples.reshape((-1, 28, 28, 1))
+    samples = np.repeat(samples, 3, axis=3)
+    samples = np.clip(samples, 0.001, 0.999)
+    samples = (samples * 256).astype('uint8')
+    save_image_grid(samples, path)
+
 def save_image_grid_colored_mnist(samples, path):
     samples = samples.reshape((-1, 14, 14, 2))
     samples = np.stack([
