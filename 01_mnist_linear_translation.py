@@ -8,8 +8,14 @@ import numpy as np
 import torch
 from torch import nn, optim
 import lib
+import os
+import sys
 
 BATCH_SIZE = 512
+OUTPUT_DIR = 'outputs/01_mnist_linear_translation'
+
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+sys.stdout = lib.Tee(f'{OUTPUT_DIR}/output.txt')
 
 mnist_red_tr, mnist_green_tr, mnist_red_va, mnist_green_va = \
     lib.make_red_and_green_mnist()
@@ -34,7 +40,7 @@ for step in range(10*1000):
         lib.print_row(step, loss_ema)
         lib.save_image_grid_colored_mnist(
             mnist_red_tr[:100].cpu().detach().numpy(),
-            f'step{str(step).zfill(5)}_original.png')
+            f'{OUTPUT_DIR}/step{str(step).zfill(5)}_original.png')
         lib.save_image_grid_colored_mnist(
             translation(mnist_red_tr[:100]).cpu().detach().numpy(),
-            f'step{str(step).zfill(5)}_translated.png')
+            f'{OUTPUT_DIR}/step{str(step).zfill(5)}_translated.png')

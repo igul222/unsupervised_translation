@@ -8,12 +8,19 @@ from torch import nn, optim, autograd
 from torchvision import datasets
 import torch.nn.functional as F
 import lib
+import os
+import sys
 
 N_TRAIN = 60000
 BATCH_SIZE = 512
 DIM = 256
 WGANGP_LAMDA = 10.
 LR = 5e-4
+OUTPUT_DIR = 'outputs/07_mnist_translation_red_green'
+
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+sys.stdout = lib.Tee(f'{OUTPUT_DIR}/output.txt')
+
 
 mnist_red_tr, mnist_green_tr, mnist_red_va, mnist_green_va = \
     lib.make_red_and_green_mnist()
@@ -78,8 +85,8 @@ for restart in range(10):
             lib.print_row(step, np.mean(loss_vals), l2_eval())
             loss_vals = []
             lib.save_image_grid_colored_mnist(mnist_red_tr[:100].cpu().numpy(),
-                f'outputs/07_restart{restart}_original.png')
+                f'{OUTPUT_DIR}/restart{restart}_original.png')
             lib.save_image_grid_colored_mnist(
                 generator(mnist_red_tr[:100]).cpu().detach().numpy(),
-                f'outputs/07_restart{restart}_translated.png'
+                f'{OUTPUT_DIR}/restart{restart}_translated.png'
             )

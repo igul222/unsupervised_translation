@@ -9,6 +9,8 @@ from torchvision import datasets
 import torch.nn.functional as F
 import lib
 from sklearn.decomposition import PCA
+import os
+import sys
 
 N_TRAIN = 60000
 BATCH_SIZE = 512
@@ -16,6 +18,10 @@ DIM = 256
 WGANGP_LAMDA = 10.
 LR = 5e-4
 PCA_DIMS = 128
+OUTPUT_DIR = 'outputs/08_mnist_translation_whitened'
+
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+sys.stdout = lib.Tee(f'{OUTPUT_DIR}/output.txt')
 
 mnist = datasets.MNIST('/tmp', train=True, download=True)
 rng_state = np.random.get_state()
@@ -91,8 +97,10 @@ for restart in range(10):
             lib.print_row(step, np.mean(loss_vals), l2_eval())
             loss_vals = []
             lib.save_image_grid_mnist(mnist_data[:100].cpu().numpy(),
-                f'outputs/08_restart{restart}_original.png')
+                f'{OUTPUT_DIR}/restart{restart}_original.png')
             lib.save_image_grid_mnist(
-                inverse_pca(generator(mnist_whitened[:100])).cpu().detach().numpy(),
-                f'outputs/08_restart{restart}_translated.png'
+                inverse_pca(
+                    generator(mnist_whitened[:100])
+                ).cpu().detach().numpy(),
+                f'{OUTPUT_DIR}/restart{restart}_translated.png'
             )

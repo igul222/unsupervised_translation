@@ -6,11 +6,23 @@ import numpy as np
 import sklearn.decomposition
 import tensorly as tl
 import tensorly.decomposition
+import lib
+import os
+import sys
 
 N = 10*1000*1000
+OUTPUT_DIR = 'outputs/06_mnist_translation_identity'
 
-Y_source = np.random.randn(N)
-X_source = np.stack([Y_source, np.exp(Y_source)], axis=1)
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+sys.stdout = lib.Tee(f'{OUTPUT_DIR}/output.txt')
+
+np.set_printoptions(suppress=True, precision=8)
+
+def half_parabola(x):
+    return np.maximum(0, x)**2
+
+Z = np.random.randn(N)
+X_source = np.stack([Z, half_parabola(Z)], axis=1)
 
 # Whiten X_source
 X_source -= np.mean(X_source, axis=0)
@@ -33,17 +45,57 @@ Mt = third_moment(X_target)
 def decomp(tensor):
     for rank in range(1, 10):
         (w, (A, B, C)), errors = tl.decomposition.parafac(tensor, rank=rank,
-            return_errors=True)
+            return_errors=True, normalize_factors=True)
+        T_hat = np.einsum('xn,yn,zn->xyz', (w[None,:] * A), A, A)
         print(f'decomp: rank {rank}, error {errors[-1]}')
-        if errors[-1] < 1e-3:
+        if errors[-1] < 1e-2:
             break
+    # Canonicalize the decomposition
+    w_sort = np.argsort(w)
+    w = w[w_sort]
+    A = A[:,w_sort]
+    B = B[:,w_sort]
+    C = C[:,w_sort]
     return w, A, B, C
+
+print('PARAFAC:')
 
 print('source:')
 ws, As, Bs, Cs = decomp(Ms)
 print('target:')
 wt, At, Bt, Ct = decomp(Mt)
 
+print('ws', ws)
+print('wt', wt)
+print('As', As)
+print('At', At)
+
 # We should have that At = T As
-T_hat_1 = At @ np.linalg.pinv(As)
-print(T_hat_1)
+T_hat = At @ np.linalg.pinv(As)
+print(T_hat)
+
+print('Symmetric PARAFAC:')
+
+def symmetric_decomp(tensor):
+    for rank in range(1, 10):
+        w, A = tl.decomposition.symmetric_parafac_power_iteration(tensor,
+            rank=rank)
+        T_hat = np.einsum('xn,yn,zn->xyz', (w[None,:] * A), A, A)
+        error = ((tensor - T_hat)**2).sum()
+        print(f'decomp: rank {rank}, error {error}')
+        if error < 1e-3:
+            break
+    # Canonicalize the decomposition
+    w_sort = np.argsort(w)
+    w = w[w_sort]
+    A = A[:,w_sort]
+    return w, A
+
+print('source:')
+ws, As = symmetric_decomp(Ms)
+print('target:')
+wt, At = symmetric_decomp(Mt)
+
+# We should have that At = T As
+T_hat = At @ np.linalg.pinv(As)
+print(T_hat)

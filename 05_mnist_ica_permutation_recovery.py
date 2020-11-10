@@ -13,8 +13,14 @@ import matplotlib; matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from scipy.stats import ortho_group
 from tqdm import tqdm
+import os
+import sys
 
 N_COMPONENTS = 64
+OUTPUT_DIR = 'outputs/05_mnist_ica_permutation_recovery'
+
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+sys.stdout = lib.Tee(f'{OUTPUT_DIR}/output.txt')
 
 mnist = datasets.MNIST('/tmp', train=True, download=True)
 rng_state = np.random.get_state()
@@ -66,12 +72,12 @@ for z1_idx in tqdm(list(range(N_COMPONENTS))):
 Z = ica_X.transform(X[:100])
 Z = np.dot(Z, permutation.T)
 Xhat = ica_X2.inverse_transform(Z)
-lib.save_image_grid_mnist(Xhat + X_mean, 'mnist_ica_permutation_recovery_xhat_translated.png')
+lib.save_image_grid_mnist(Xhat + X_mean, f'{OUTPUT_DIR}/xhat_translated.png')
 
 Z = ica_X.transform(X[:100])
 Z = np.dot(Z, np.eye(N_COMPONENTS))
 Xhat = ica_X.inverse_transform(Z)
-lib.save_image_grid_mnist(Xhat + X_mean, 'mnist_ica_permutation_recovery_xhat_orig.png')
+lib.save_image_grid_mnist(Xhat + X_mean, f'{OUTPUT_DIR}/xhat_orig.png')
 
 components_X = ica_X.components_
 components_X2 = np.dot(ica_X2.components_.T, permutation).T
@@ -81,5 +87,5 @@ def save_components(x, name):
     x -= x.min()
     x /= x.max()
     lib.save_image_grid_mnist(x, name)
-save_components(components_X, 'mnist_ica_permutation_recovery_components_X.png')
-save_components(components_X2, 'mnist_ica_permutation_recovery_components_X2_matched.png')
+save_components(components_X, f'{OUTPUT_DIR}/components_X.png')
+save_components(components_X2, f'{OUTPUT_DIR}/components_X2_matched.png')

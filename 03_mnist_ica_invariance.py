@@ -14,8 +14,14 @@ import lib
 import torch
 import matplotlib; matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+import os
+import sys
 
 N_COMPONENTS = 64
+OUTPUT_DIR = 'outputs/03_mnist_ica_invariance'
+
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+sys.stdout = lib.Tee(f'{OUTPUT_DIR}/output.txt')
 
 mnist = datasets.MNIST('/tmp', train=True, download=True)
 rng_state = np.random.get_state()

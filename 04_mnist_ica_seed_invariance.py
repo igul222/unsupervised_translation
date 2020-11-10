@@ -12,8 +12,14 @@ import torch
 import matplotlib; matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from scipy.stats import ortho_group
+import os
+import sys
 
 N_COMPONENTS = 64
+OUTPUT_DIR = 'outputs/04_mnist_ica_seed_invariance'
+
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+sys.stdout = lib.Tee(f'{OUTPUT_DIR}/output.txt')
 
 mnist = datasets.MNIST('/tmp', train=True, download=True)
 rng_state = np.random.get_state()
@@ -66,17 +72,17 @@ for comp_i, comp in enumerate(components_X):
 Z = ica_X.transform(X[:100])
 Z = np.dot(Z, permutation.T)
 Xhat = ica_X2.inverse_transform(Z)
-lib.save_image_grid_mnist(Xhat + X_mean, 'mnist_ica_seed_invariance_x_translated.png')
+lib.save_image_grid_mnist(Xhat + X_mean, f'{OUTPUT_DIR}/x_translated.png')
 
 Z = ica_X.transform(X[:100])
 Z = np.dot(Z, np.eye(N_COMPONENTS))
 Xhat = ica_X.inverse_transform(Z)
-lib.save_image_grid_mnist(Xhat + X_mean, 'mnist_ica_seed_invariance_x_original.png')
+lib.save_image_grid_mnist(Xhat + X_mean, f'{OUTPUT_DIR}/x_original.png')
 
 def save_components(x, name):
     x = np.copy(x)
     x -= x.min()
     x /= x.max()
     lib.save_image_grid_mnist(x, name)
-save_components(components_X, 'mnist_ica_seed_invariance_components_X.png')
-save_components(np.array(matches), 'mnist_ica_seed_invariance_components_X2_matched.png')
+save_components(components_X, f'{OUTPUT_DIR}/components_X.png')
+save_components(np.array(matches), f'{OUTPUT_DIR}/components_X2_matched.png')
