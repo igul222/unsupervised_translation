@@ -59,7 +59,7 @@ def forward(detach=False):
 
 def l2_eval():
     EVAL_BS = 4096
-    x_red = lib.get_batch(mnist_red_tr, EVAL_BS)
+    x_red = lib.get_batch([mnist_red_tr], EVAL_BS)
     x_fake = generator(x_red)
     x_real = x_red.view(EVAL_BS, 14, 14, 2).flip(3).view(EVAL_BS, 2*196)
     return (x_fake - x_real).pow(2).mean()

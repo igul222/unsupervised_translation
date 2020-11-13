@@ -8,7 +8,7 @@ from torchvision import datasets
 import sys
 
 class Tee:
-    def __init__(self, fname, mode="a"):
+    def __init__(self, fname, mode="w"):
         self.stdout = sys.stdout
         self.file = open(fname, mode)
 
@@ -83,9 +83,13 @@ def mmd(kernel_fn, x, y, triu_x=True, triu_y=True):
         + matrix_mean(kernel_fn(x, x), triu_x)
         + matrix_mean(kernel_fn(y, y), triu_y))
 
-def get_batch(x, batch_size):
-    idx = torch.randint(low=0, high=len(x), size=(batch_size,))
-    return x[idx]
+def get_batch(vars_, batch_size):
+    if torch.is_tensor(vars_):
+        idx = torch.randint(low=0, high=len(vars_), size=(batch_size,))
+        return vars_[idx]
+    else:
+        idx = torch.randint(low=0, high=len(vars_[0]), size=(batch_size,))
+        return [v[idx] for v in vars_]
 
 def print_row(*row, colwidth=10):
     def format_val(x):

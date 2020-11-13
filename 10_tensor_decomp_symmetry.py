@@ -32,7 +32,7 @@ X_reflection = np.stack([Z1, half_parabola(Z2)], axis=1)
 
 X_rotation = np.zeros((N, 3))
 X_rotation[:N//3, 0] = np.cos(0)
-X_rotation[:N//3, 1] = np.sin(1)
+X_rotation[:N//3, 1] = np.sin(0)
 X_rotation[N//3+1:2*N//3, 0] = np.cos(2*np.pi/3)
 X_rotation[N//3+1:2*N//3, 1] = np.sin(2*np.pi/3)
 X_rotation[2*N//3+1:, 0] = np.cos(4*np.pi/3)
