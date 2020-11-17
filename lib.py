@@ -7,6 +7,11 @@ import torch.nn.functional as F
 from torchvision import datasets
 import sys
 
+def print_tensor(label, tensor):
+    print(f'{label}:')
+    for line in str(tensor).splitlines():
+        print(f"\t{line}")
+
 class Tee:
     def __init__(self, fname, mode="w"):
         self.stdout = sys.stdout

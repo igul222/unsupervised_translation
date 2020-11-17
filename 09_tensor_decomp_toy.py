@@ -11,7 +11,7 @@ import os
 import sys
 
 N = 10*1000*1000
-OUTPUT_DIR = 'outputs/06_mnist_translation_identity'
+OUTPUT_DIR = 'outputs/09_tensor_decomp_toy'
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 sys.stdout = lib.Tee(f'{OUTPUT_DIR}/output.txt')
@@ -46,7 +46,6 @@ def decomp(tensor):
     for rank in range(1, 10):
         (w, (A, B, C)), errors = tl.decomposition.parafac(tensor, rank=rank,
             return_errors=True, normalize_factors=True)
-        T_hat = np.einsum('xn,yn,zn->xyz', (w[None,:] * A), A, A)
         print(f'decomp: rank {rank}, error {errors[-1]}')
         if errors[-1] < 1e-2:
             break

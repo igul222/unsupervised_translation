@@ -21,7 +21,7 @@ OUTPUT_DIR = 'outputs/06_mnist_translation_identity'
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 sys.stdout = lib.Tee(f'{OUTPUT_DIR}/output.txt')
 
-np.set_printoptions(suppress=True, precision=8)
+np.set_printoptions(suppress=True, precision=4, linewidth=200)
 
 def half_parabola(x):
     return np.maximum(0, x)**2
@@ -77,9 +77,8 @@ for name, X_source in test_cases:
         for rank in range(1, 10):
             (w, (A, B, C)), errors = tl.decomposition.parafac(tensor, rank=rank,
                 return_errors=True, normalize_factors=True)
-            T_hat = np.einsum('xn,yn,zn->xyz', (w[None,:] * A), A, A)
             print(f'decomp: rank {rank}, error {errors[-1]}')
-            if errors[-1] < 1e-3:
+            if errors[-1] < 1e-2:
                 break
         # Canonicalize the decomposition
         w_sort = np.argsort(w)
@@ -89,21 +88,19 @@ for name, X_source in test_cases:
         C = C[:,w_sort]
         return w, A, B, C
 
-    print('PARAFAC:')
-
     print('source:')
     ws, As, Bs, Cs = decomp(Ms)
     print('target:')
     wt, At, Bt, Ct = decomp(Mt)
 
-    print('ws', ws)
-    print('wt', wt)
-    print('As', As)
-    print('At', At)
+    lib.print_tensor('ws', ws)
+    lib.print_tensor('wt', wt)
+    lib.print_tensor('As', As)
+    lib.print_tensor('At', At)
 
     if As.shape == At.shape:
         # We should have that At = T As
         T_hat = At @ np.linalg.pinv(As)
-        print(T_hat)
+        lib.print_tensor('T_hat', T_hat)
     else:
         print('Not attempting to find a translation; ranks didn\'t match')
