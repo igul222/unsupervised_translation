@@ -37,19 +37,19 @@ with torch.no_grad():
     source = mnist_data[::2]
     target = mnist_data[1::2]
 
-    def whiten(X):
+    def pca(X):
         X = X.detach().cpu().numpy()
         pca = PCA(n_components=PCA_DIMS, whiten=True)
         return torch.tensor(pca.fit_transform(X)).float().cuda(), pca
 
-    source, source_pca = whiten(source)
-    target, target_pca = whiten(target)
+    source, _ = pca(source)
+    target, _ = pca(target)
  
     def square_norms(X):
         return X * X.norm(p=2, dim=1, keepdim=True)
 
-    As = torch.tensor(whiten(square_norms(source))[1].components_.T).cuda()
-    At = torch.tensor(whiten(square_norms(target))[1].components_.T).cuda()
+    As = torch.tensor(pca(square_norms(source))[1].components_.T).cuda()
+    At = torch.tensor(pca(square_norms(target))[1].components_.T).cuda()
 
     # we should have At = T As
     print('Recovered translation (should be identity):')
