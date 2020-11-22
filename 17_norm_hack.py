@@ -18,7 +18,7 @@ from sklearn.decomposition import KernelPCA
 import tqdm
 
 PCA_DIMS = 8
-OUTPUT_DIR = 'outputs/16_norm_covariance_thing'
+OUTPUT_DIR = 'outputs/17_norm_hack'
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 sys.stdout = lib.Tee(f'{OUTPUT_DIR}/output.txt')
