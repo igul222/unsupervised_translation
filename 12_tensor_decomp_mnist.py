@@ -8,16 +8,11 @@ from sklearn.decomposition import PCA
 import tensorly as tl
 import tensorly.decomposition
 import lib
-import os
-import sys
 from torchvision import datasets
 import torch
 
 OUTPUT_DIR = 'outputs/12_tensor_decomp_mnist'
 PCA_DIMS = 50
-
-os.makedirs(OUTPUT_DIR, exist_ok=True)
-sys.stdout = lib.Tee(f'{OUTPUT_DIR}/output.txt')
 
 np.set_printoptions(suppress=True, precision=4, linewidth=200)
 

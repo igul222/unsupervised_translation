@@ -1,46 +1,38 @@
 """
-Can we find a linear map which translates red MNIST to green MNIST by naive
-gradient descent on MMD?
-Answer: Not really; we get stuck in local minima.
+Can we find a linear map which translates red MNIST to green MNIST by gradient
+descent on MMD? Not really; we seem to get stuck in local minima.
 """
 
 import numpy as np
 import torch
 from torch import nn, optim
-import lib
-import os
-import sys
+from lib import datasets, ops, utils
 
 BATCH_SIZE = 512
-OUTPUT_DIR = 'outputs/01_mnist_linear_translation'
 
-os.makedirs(OUTPUT_DIR, exist_ok=True)
-sys.stdout = lib.Tee(f'{OUTPUT_DIR}/output.txt')
+mnist_red, mnist_green = datasets.colored_mnist()
 
-mnist_red_tr, mnist_green_tr, mnist_red_va, mnist_green_va = \
-    lib.make_red_and_green_mnist()
-
-translation = nn.Linear(2*196, 2*196).cuda()
-opt = optim.Adam(translation.parameters(), lr=1e-3)
+translation = nn.Linear(2*784, 2*784).cuda()
+opt = optim.Adam(translation.parameters(), lr=5e-4)
 
 def forward():
-    x_red = lib.get_batch(mnist_red_tr, BATCH_SIZE)
-    x_green = lib.get_batch(mnist_green_tr, BATCH_SIZE)
-    x_green_fake = translation(x_red)
-    return lib.mmd(lib.energy_kernel, x_green, x_green_fake)
+    x_red = ops.get_batch(mnist_red, BATCH_SIZE)
+    x_green = ops.get_batch(mnist_green, BATCH_SIZE)
+    x_translated = translation(x_red)
+    return ops.mmd(ops.energy_kernel, x_green, x_translated)
 
 loss_ema = 0.
-for step in range(10*1000):
+for step in range(10001):
     loss = forward()
     opt.zero_grad()
     loss.backward()
     opt.step()
-    loss_ema = (0.05*loss.item()) + (0.95*loss_ema)
-    if step % 100 == 0:
-        lib.print_row(step, loss_ema)
-        lib.save_image_grid_colored_mnist(
-            mnist_red_tr[:100].cpu().detach().numpy(),
-            f'{OUTPUT_DIR}/step{str(step).zfill(5)}_original.png')
-        lib.save_image_grid_colored_mnist(
-            translation(mnist_red_tr[:100]).cpu().detach().numpy(),
-            f'{OUTPUT_DIR}/step{str(step).zfill(5)}_translated.png')
+    loss_ema = (0.01*loss.item()) + (0.99*loss_ema)
+    if step % 1000 == 0:
+        utils.print_row(step, loss_ema)
+        utils.save_image_grid_colored_mnist(
+            mnist_red[:100],
+            f'step{str(step).zfill(5)}_original.png')
+        utils.save_image_grid_colored_mnist(
+            translation(mnist_red[:100]),
+            f'step{str(step).zfill(5)}_translated.png')
