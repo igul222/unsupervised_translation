@@ -1,6 +1,7 @@
 """
-Does ICA on MNIST yield latent variables with asymmetric distributions?
-Answer: No, by visual inspection of most_symmetric_marginal.png
+Q: Does ICA on MNIST yield latent variables with asymmetric distributions?
+
+A: No, by visual inspection of most_symmetric_marginal.png
 """
 
 import numpy as np

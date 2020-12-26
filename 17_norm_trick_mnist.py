@@ -1,6 +1,8 @@
 """
-Recover a random orthogonal translation of whitened MNIST.
-Method: transform the norm of each point, then align the PCs.
+Recover a random orthogonal translation of whitened MNIST by fourth-powering
+the norm of each point and then aligning the PCs.
+
+Result: it works, but it doesn't scale well past ~8 principal components.
 """
 
 import numpy as np
@@ -22,18 +24,18 @@ for _ in tqdm.tqdm(range(100)):
 
     T_groundtruth = torch.tensor(ortho_group.rvs(N_PCA)).float().cuda()
     X_source = X[::2]
-    X_target = X[::2] @ T_groundtruth.T
+    X_target = X[1::2] @ T_groundtruth.T
 
-    def raise_norm(X, power):
-        return X * X.norm(p=2, dim=1, keepdim=True).pow(power - 1)
+    def transform(X):
+        return X * X.norm(p=2, dim=1, keepdim=True).pow(3)
 
-    X_source_transformed = raise_norm(X_source, 4)
-    X_target_transformed = raise_norm(X_target, 4)
+    X_source_transformed = transform(X_source)
+    X_target_transformed = transform(X_target)
 
     source_pca = pca.PCA(X_source_transformed, N_PCA, whiten=True)
     target_pca = pca.PCA(X_target_transformed, N_PCA, whiten=True)
-    As = source_pca.components
-    At = target_pca.components
+    As = source_pca.components[:X_source.shape[1], :]
+    At = target_pca.components[:X_source.shape[1], :]
 
     # Fix flipped PCs by comparing the marginal distributions
     X_source_pca = source_pca.forward(X_source_transformed)
