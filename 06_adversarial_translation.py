@@ -17,7 +17,7 @@ from lib import utils, ops, datasets, adversarial_translation
 N_INSTANCES = 8
 
 X_source, _, X_target, _ = datasets.colored_mnist()
-translations, energy_dists = adversarial_translation.train(
+translations, divergences = adversarial_translation.train(
     X_source, X_target, N_INSTANCES, 
     lambda_gp=3.0,
     lambda_orth=0.,

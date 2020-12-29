@@ -29,7 +29,7 @@ W2 = ops.random_orthogonal_matrix(X_target.shape[1])
 X_source = X_source @ W1.T
 X_target = X_target @ W2.T
 
-translations, energy_dists = adversarial_translation.train(
+translations, divergences = adversarial_translation.train(
     X_source, X_target, N_INSTANCES, 
     disc_dim=512,
     lambda_gp=1.0,
@@ -38,7 +38,7 @@ translations, energy_dists = adversarial_translation.train(
     lr_d=1e-3,
     print_freq=1000,
     steps=20001,
-    weight_decay_d=1e-3,
+    weight_decay_d=1e-3
 )
 
 utils.save_image_grid_colored_mnist(

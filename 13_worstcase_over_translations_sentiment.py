@@ -3,9 +3,17 @@
 using pretrained Fasttext Wikipedia vectors and a sentiment lexicon.
 Source is English, target is German.
 
-Result: We usually achieve slightly better accuracy than any individual
+Results:
+
+We usually achieve slightly better accuracy than any individual
 translation, but it remains to be seen whether we outperform smarter baselines
-which make use of multiple translations.
+which make use of multiple translations. For example:
+- Average the top-K translation maps to make a new map
+- ERM on pooled data from top-K translations
+- Ensemble of predictors corresponding to each of top-K translations
+
+Also, energy distance is pretty crap at identifying the good translations.
+We should replace it with something better (NND).
 """
 
 import numpy as np
@@ -60,7 +68,7 @@ X_target = X_target @ W2.T
 
 # Step 1: Learn many translations.
 
-translations, energy_dists = adversarial_translation.train(
+translations, divergences = adversarial_translation.train(
     X_source, X_target, N_TRANSLATIONS,
     batch_size=TRANSLATION_BATCH_SIZE,
     lambda_gp=TRANSLATION_LAMBDA_GP,
@@ -75,7 +83,7 @@ translations, energy_dists = adversarial_translation.train(
 
 word_idx = 81 # source_words[81] is "american"
 print(f'Nearest neighbors to "{source_words[word_idx]}":')
-for idx in torch.argsort(torch.tensor(energy_dists)):
+for idx in torch.argsort(divergences):
     X_trans = X_source @ translations[idx].T
     target_neighbors = ops.nearest_neighbors(X_target, X_trans[word_idx])
     result_list = ", ".join([target_words[j] for j in target_neighbors[:5]])
@@ -83,7 +91,7 @@ for idx in torch.argsort(torch.tensor(energy_dists)):
 
 # Step 2: Sort by energy distance.
 
-best_indices = torch.argsort(torch.tensor(energy_dists))
+best_indices = torch.argsort(divergences)
 translations = translations[best_indices].detach()
 
 # Step 3: Minimize worst-case risk over them.
@@ -103,8 +111,9 @@ def train_worstcase(Xy_datasets):
             for X,y in Xy_datasets
         ]
         return torch.stack(losses).max()
-    utils.train_loop(predictor, forward, PREDICTION_STEPS, PREDICTION_LR,
-        weight_decay=PREDICTION_WEIGHT_DECAY, quiet=True)
+    opt = optim.Adam(predictor.parameters(), lr=PREDICTION_LR,
+        weight_decay=PREDICTION_WEIGHT_DECAY)
+    utils.train_loop(forward, opt, PREDICTION_STEPS, quiet=True)
     return predictor
 
 def acc(predictor, X, y):

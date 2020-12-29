@@ -1,8 +1,11 @@
 """
-Kernel PCA on 2D Swiss Roll. Note that we actually do PCA on quadratic
-features rather than going through the kernel matrix. Also, we need the noise
-level to be very small because it seems this algorithm is really
-noise-sensitive.
+KPCA-translation on 2D Swiss Roll. We run KPCA on each domain to project points
+into a common space, match points in this space, and then fit a translation
+matrix from the matching. Note that we actually do PCA on quadratic features
+rather than going through the kernel matrix.
+
+Result: It works, but you need large sample size and low dataset noise. I
+don't think this will ever scale beyond toy examples.
 """
 
 import torch

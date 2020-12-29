@@ -20,14 +20,13 @@ from lib import ops, utils, datasets, adversarial_translation
 
 DATASET_SIZE = 10*1000
 N_TRANSLATIONS = 64
-N_BEST_TRANSLATIONS = 16
 TRANSLATION_STEPS = 1001
-LAMBDA_GP = 0.1
-LR_G = 1e-2
+TRANSLATION_LAMBDA_GP = 0.1
+TRANSLATION_LR_G = 1e-2
 
-PREDICTOR_BATCH_SIZE = 1024
-PREDICTOR_STEPS = 1001
-PREDICTOR_LR = 1e-2
+PREDICTION_BATCH_SIZE = 1024
+PREDICTION_STEPS = 1001
+PREDICTION_LR = 1e-2
 
 def half_parabola(x):
     return torch.clamp(x, min=0).pow(2)
@@ -49,28 +48,29 @@ X_target, y_target = make_dataset('target')
 
 # Step 1: Learn many translations.
 
-translations, energy_dists = adversarial_translation.train(
+translations, divergences = adversarial_translation.train(
     X_source, X_target, N_TRANSLATIONS,
-    lambda_gp=LAMBDA_GP,
-    lr_g=LR_G,
+    lambda_gp=TRANSLATION_LAMBDA_GP,
+    lr_g=TRANSLATION_LR_G,
     steps=TRANSLATION_STEPS)
 
-# Step 2: Identify a subset of good translations.
+# Step 2: Sort by energy distance.
 
-best_indices = torch.argsort(torch.tensor(energy_dists))[:N_BEST_TRANSLATIONS]
+best_indices = torch.argsort(divergences)
 translations = translations[best_indices].detach()
 
 # Step 3: Minimize worst-case risk over them.
 
 predictor = nn.Linear(X_source.shape[1], 1).cuda()
 def forward():
-    Xs, ys = ops.get_batch([X_source, y_source], PREDICTOR_BATCH_SIZE)
+    Xs, ys = ops.get_batch([X_source, y_source], PREDICTION_BATCH_SIZE)
     Xs = Xs[None,:,:].expand(translations.shape[0], -1, -1)
     ys = ys[None,:].expand(translations.shape[0], -1)
     Xs_translated = torch.bmm(Xs, translations.permute(0,2,1))
     losses = (predictor(Xs_translated)[:,:,0] - ys).pow(2).mean(dim=1)
     return losses.max()
-utils.train_loop(predictor, forward, PREDICTOR_STEPS, PREDICTOR_LR)
+opt = optim.Adam(predictor.parameters(), lr=PREDICTION_LR)
+utils.train_loop(forward, opt, lr=PREDICTION_LR, PREDICTION_STEPS)
 
 # Step 4: Final evaluation on the target distribution
 
