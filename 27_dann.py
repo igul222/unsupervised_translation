@@ -16,8 +16,6 @@ import copy
 PCA_DIM = 128
 DISC_DIM = 512
 BATCH_SIZE = 1024
-N_INSTANCES = 64
-N_TOP = 8
 STEPS = 10001
 DEFAULT_HPARAMS = {
     'lr_g': 1e-3,
@@ -29,9 +27,13 @@ DEFAULT_HPARAMS = {
 }
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--z_dim', type=int, default=32)
+parser.add_argument('--dataset', type=str, default='colored_mnist')
 parser.add_argument('--hparam_search', action='store_true')
+parser.add_argument('--n_instances', type=int, default=64)
+parser.add_argument('--n_top', type=int, default=8)
+parser.add_argument('--z_dim', type=int, default=32)
 args = parser.parse_args()
+
 print('Args:')
 for k,v in sorted(vars(args).items()):
     print(f'\t{k}: {v}')
@@ -41,7 +43,7 @@ def trial_fn(**hparams):
     for k,v in sorted(hparams.items()):
         print(f'\t{k}: {v}')
 
-    X_source, y_source, X_target, y_target = datasets.colored_mnist()
+    X_source, y_source, X_target, y_target = datasets.REGISTRY[args.dataset]()
     source_pca = pca.PCA(X_source, PCA_DIM, whiten=True)
     target_pca = pca.PCA(X_target, PCA_DIM, whiten=True)
     X_source = source_pca.forward(X_source)
@@ -54,7 +56,7 @@ def trial_fn(**hparams):
 
     source_rep, target_rep, classifier, divergences, accs = (
         adversarial_translation.dann(
-            X_source, y_source, X_target, y_target, N_INSTANCES,
+            X_source, y_source, X_target, y_target, args.n_instances,
             batch_size=BATCH_SIZE,
             disc_dim=DISC_DIM,
             steps=STEPS,
@@ -62,10 +64,10 @@ def trial_fn(**hparams):
             **hparams))
 
     print(f'All accs: {accs.mean().item()} +/- {accs.std().item()}')
-    top_accs = accs[torch.argsort(divergences)][:N_TOP]
+    top_accs = accs[torch.argsort(divergences)][:args.n_top]
     top_accs_mean = top_accs.mean().item()
     top_accs_std = top_accs.std().item()
-    print(f'Top {N_TOP} accs: {top_accs_mean} +/- {top_accs_std}')
+    print(f'Top {args.n_top} accs: {top_accs_mean} +/- {top_accs_std}')
     return top_accs_mean
 
 if args.hparam_search:
