@@ -7,17 +7,16 @@ hyperparameters), so we train 8 instances simultaneously and compute energy
 distances to select the best model.
 """
 
+import lib
 import numpy as np
 import torch
-from torch import nn, optim, autograd
-from torchvision import datasets
 import torch.nn.functional as F
-from lib import utils, ops, datasets, adversarial_translation
+from torch import nn, optim, autograd
 
 N_INSTANCES = 8
 
-X_source, _, X_target, _ = datasets.colored_mnist()
-translations, divergences = adversarial_translation.train(
+X_source, _, X_target, _ = lib.datasets.colored_mnist()
+translations, divergences = lib.adversarial.train_translation(
     X_source, X_target, N_INSTANCES, 
     lambda_gp=3.0,
     lambda_orth=0.,
@@ -26,11 +25,11 @@ translations, divergences = adversarial_translation.train(
     lr_d=2e-4,
     print_freq=1000,
     steps=30001,
-    weight_decay_d=1e-3
+    l2reg_d=1e-3
 )
 
-utils.save_image_grid_colored_mnist(X_source[:100], 'source.png')
+lib.utils.save_image_grid(X_source[:100], 'source.png')
 
 for i in range(N_INSTANCES):
     translated = X_source[:100] @ translations[i].T
-    utils.save_image_grid_colored_mnist(translated, f'translation_{i}.png')
+    lib.utils.save_image_grid(translated, f'translation_{i}.png')

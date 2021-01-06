@@ -4,12 +4,11 @@ the optimal least-squares predictor without inverting the covariance.
 
 Status: Code works but no real conclusions.
 """
-import argparse
-import numpy as np
+
+import lib
 import torch
-from torch import nn, optim, autograd
-from lib import ops, utils, pca, datasets
 import torch.nn.functional as F
+from torch import nn, optim
 
 INPUT_DIM = 2*196
 PCA_DIM = 256
@@ -17,16 +16,16 @@ REPR_DIM = 128
 LAMBDA_ERM = 0
 LAMBDA_COV = 1
 
-envs = datasets.irm_colored_mnist()
+envs = lib.datasets.irm_colored_mnist()
 
 X_pooled = torch.cat([envs[0]['images'], envs[1]['images']], dim=0)
-X_pca = pca.PCA(X_pooled, PCA_DIM, whiten=True)
+X_pca = lib.pca.PCA(X_pooled, PCA_DIM, whiten=True)
 X1, y1 = X_pca.forward(envs[0]['images']), envs[0]['labels']
 X2, y2 = X_pca.forward(envs[1]['images']), envs[1]['labels']
 X3, y3 = X_pca.forward(envs[2]['images']), envs[2]['labels']
 
 # Apply random orthogonal transforms for optimization reasons.
-W = ops.random_orthogonal_matrix(X1.shape[1])
+W = lib.ops.random_orthogonal_matrix(X1.shape[1])
 X1 = X1 @ W.T
 X2 = X2 @ W.T
 X3 = X3 @ W.T
@@ -67,16 +66,16 @@ def forward():
     )
 
     train_acc = (
-        ops.binary_accuracy(preds1, y1)
-        + ops.binary_accuracy(preds2, y1)
+        lib.ops.binary_accuracy(preds1, y1)
+        + lib.ops.binary_accuracy(preds2, y1)
     ) / 2.
 
     phi_test = (phi1 + phi2) / 2.
-    test_acc = ops.binary_accuracy(featurizer(X3) @ phi_test, y3)
+    test_acc = lib.ops.binary_accuracy(featurizer(X3) @ phi_test, y3)
 
     return loss, irm_loss, train_mse, cov_penalty, train_acc, test_acc
 
-utils.print_row('step', 'loss', 'irm_loss', 'train_mse', 'cov_penalty',
+lib.utils.print_row('step', 'loss', 'irm_loss', 'train_mse', 'cov_penalty',
     'train_acc', 'test_acc')
 scaler = torch.cuda.amp.GradScaler()
 for step in range(10001):
@@ -88,7 +87,7 @@ for step in range(10001):
     scaler.update()
 
     if step % 1000 == 0:
-        utils.print_row(
+        lib.utils.print_row(
             step,
             loss,
             irm_loss,

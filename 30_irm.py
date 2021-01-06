@@ -5,20 +5,20 @@ representation affect anything?
 
 A: Not by much, apparently.
 """
+
 import argparse
-import numpy as np
+import lib
 import torch
-from torch import nn, optim, autograd
-from lib import ops, utils, pca, datasets
 import torch.nn.functional as F
+from torch import nn, optim, autograd
 
 INPUT_DIM = 2*196
 PCA_DIM = 64
 
-envs = datasets.irm_colored_mnist()
+envs = lib.datasets.irm_colored_mnist()
 
 X_pooled = torch.cat([envs[0]['images'], envs[1]['images']], dim=0)
-X_pca = pca.PCA(X_pooled, PCA_DIM, whiten=True)
+X_pca = lib.pca.PCA(X_pooled, PCA_DIM, whiten=True)
 for env in envs:
     env['images'] = X_pca.forward(env['images'])
 
@@ -37,10 +37,10 @@ for REPR_DIM in [1, 8, 48, 63]:
 
         eye = torch.eye(REPR_DIM, device='cuda')
 
-        utils.print_row('step', 'train_nll', 'train_acc', 'train_penalty',
+        lib.utils.print_row('step', 'train_nll', 'train_acc', 'train_penalty',
             'test_acc')
         for step in range(5001):
-            utils.enforce_orthogonality(featurizer.weight)
+            lib.utils.enforce_orthogonality(featurizer.weight)
 
             for env in envs:
                 feats = featurizer(env['images'])
@@ -49,7 +49,7 @@ for REPR_DIM in [1, 8, 48, 63]:
                 logits = classifier(feats * ones)
                 env['nll'] = F.binary_cross_entropy_with_logits(logits,
                     env['labels'])
-                env['acc'] = ops.binary_accuracy(logits, env['labels'])
+                env['acc'] = lib.ops.binary_accuracy(logits, env['labels'])
                 grad = autograd.grad(env['nll'], [ones], create_graph=True)[0]
                 env['penalty'] = grad.pow(2).sum()
 
@@ -68,7 +68,7 @@ for REPR_DIM in [1, 8, 48, 63]:
 
             test_acc = envs[2]['acc']
             if step % 1000 == 0:
-                utils.print_row(
+                lib.utils.print_row(
                     step,
                     train_nll,
                     train_acc,

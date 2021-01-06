@@ -8,27 +8,27 @@ two ICA representations of the same underlying data. The translation quality
 is okay, but not great.
 """
 
+import lib
 import numpy as np
-from sklearn.decomposition import FastICA
 import torch
-from lib import utils, ops, datasets, pca
+from sklearn.decomposition import FastICA
 
 N_COMPONENTS = 64
 
 np.set_printoptions(suppress=True)
 
-X, _ = datasets.mnist()
+X, _ = lib.datasets.mnist()
 X1, X2 = X[::2], X[1::2]
 
 # Whiten
-pca1 = pca.PCA(X1, N_COMPONENTS, whiten=True)
-pca2 = pca.PCA(X2, N_COMPONENTS, whiten=True)
+pca1 = lib.pca.PCA(X1, N_COMPONENTS, whiten=True)
+pca2 = lib.pca.PCA(X2, N_COMPONENTS, whiten=True)
 X1 = pca1.forward(X1)
 X2 = pca2.forward(X2)
 
 # Apply random orthogonal transforms
-W1 = ops.random_orthogonal_matrix(X1.shape[1])
-W2 = ops.random_orthogonal_matrix(X2.shape[1])
+W1 = lib.ops.random_orthogonal_matrix(X1.shape[1])
+W2 = lib.ops.random_orthogonal_matrix(X2.shape[1])
 X1 = X1 @ W1.T
 X2 = X2 @ W2.T
 
@@ -70,6 +70,6 @@ Xt = Xt @ W_perm.T
 Xt = ica2.inverse_transform(Xt)
 Xt = pca2.inverse(torch.tensor(Xt).cuda().float() @ W2)
 
-utils.save_image_grid_mnist(pca1.inverse(X1[:100] @ W1), 'X_original.png')
-utils.save_image_grid_mnist(Xt, 'X_translated.png')
+lib.utils.save_image_grid(pca1.inverse(X1[:100] @ W1), 'X_original.png')
+lib.utils.save_image_grid(Xt, 'X_translated.png')
 print('Saved X_original.png and X_translated.png; they should look similar.')

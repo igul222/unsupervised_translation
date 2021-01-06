@@ -16,12 +16,11 @@ Also, energy distance is pretty crap at identifying the good translations.
 We should replace it with something better (NND).
 """
 
+import lib
 import numpy as np
 import torch
-from torch import nn, optim, autograd
-import lib
-from lib import ops, utils, datasets, adversarial_translation, pca
 import torch.nn.functional as F
+from torch import nn, optim
 
 N_WORDS = 200*1000
 PCA_DIM = 256
@@ -29,7 +28,7 @@ PCA_DIM = 256
 TRANSLATION_BATCH_SIZE = 1024
 TRANSLATION_LAMBDA_GP = 10.
 TRANSLATION_LAMBDA_ORTH = 0.1
-TRANSLATION_WEIGHT_DECAY_D = 1e-4
+TRANSLATION_l2reg_D = 1e-4
 # "Debug mode"
 # N_TRANSLATIONS = 4
 # TRANSLATION_STEPS = 101
@@ -50,25 +49,25 @@ PREDICTION_STEPS = 5001
 PREDICTION_LR = 1e-2
 PREDICTION_WEIGHT_DECAY = 1e-3
 
-source_words, X_source = datasets.en_word_vectors()
-target_words, X_target = datasets.de_word_vectors()
+source_words, X_source = lib.datasets.en_word_vectors()
+target_words, X_target = lib.datasets.de_word_vectors()
 X_source = X_source[:N_WORDS]
 X_target = X_target[:N_WORDS]
 
-source_pca = pca.PCA(X_source, PCA_DIM, whiten=True)
-target_pca = pca.PCA(X_target, PCA_DIM, whiten=True)
+source_pca = lib.pca.PCA(X_source, PCA_DIM, whiten=True)
+target_pca = lib.pca.PCA(X_target, PCA_DIM, whiten=True)
 X_source = source_pca.forward(X_source)
 X_target = target_pca.forward(X_target)
 
 # Apply random orthogonal transforms for optimization reasons.
-W1 = ops.random_orthogonal_matrix(X_source.shape[1])
-W2 = ops.random_orthogonal_matrix(X_target.shape[1])
+W1 = lib.ops.random_orthogonal_matrix(X_source.shape[1])
+W2 = lib.ops.random_orthogonal_matrix(X_target.shape[1])
 X_source = X_source @ W1.T
 X_target = X_target @ W2.T
 
 # Step 1: Learn many translations.
 
-translations, divergences = adversarial_translation.train(
+translations, divergences = lib.adversarial.train_translation(
     X_source, X_target, N_TRANSLATIONS,
     batch_size=TRANSLATION_BATCH_SIZE,
     lambda_gp=TRANSLATION_LAMBDA_GP,
@@ -77,7 +76,7 @@ translations, divergences = adversarial_translation.train(
     lr_d=TRANSLATION_LR_D,
     print_freq=5000,
     steps=TRANSLATION_STEPS,
-    weight_decay_d=TRANSLATION_WEIGHT_DECAY_D,
+    l2reg_d=TRANSLATION_l2reg_D,
     algorithm='wgan-gp',
 )
 
@@ -85,7 +84,7 @@ word_idx = 81 # source_words[81] is "american"
 print(f'Nearest neighbors to "{source_words[word_idx]}":')
 for idx in torch.argsort(divergences):
     X_trans = X_source @ translations[idx].T
-    target_neighbors = ops.nearest_neighbors(X_target, X_trans[word_idx])
+    target_neighbors = lib.ops.nearest_neighbors(X_target, X_trans[word_idx])
     result_list = ", ".join([target_words[j] for j in target_neighbors[:5]])
     print(f'Instance {idx.item()}:', result_list)
 
@@ -96,8 +95,8 @@ translations = translations[best_indices].detach()
 
 # Step 3: Minimize worst-case risk over them.
 
-X_source, y_source = datasets.en_sentiment_lexicon()
-X_target, y_target = datasets.de_sentiment_lexicon()
+X_source, y_source = lib.datasets.en_sentiment_lexicon()
+X_target, y_target = lib.datasets.de_sentiment_lexicon()
 X_source = source_pca.forward(X_source)
 X_target = target_pca.forward(X_target)
 X_source = X_source @ W1.T
@@ -113,11 +112,11 @@ def train_worstcase(Xy_datasets):
         return torch.stack(losses).max()
     opt = optim.Adam(predictor.parameters(), lr=PREDICTION_LR,
         weight_decay=PREDICTION_WEIGHT_DECAY)
-    utils.train_loop(forward, opt, PREDICTION_STEPS, quiet=True)
+    lib.utils.train_loop(forward, opt, PREDICTION_STEPS, quiet=True)
     return predictor
 
 def acc(predictor, X, y):
-    return ops.binary_accuracy(predictor(X)[:,0], y).item()
+    return lib.ops.binary_accuracy(predictor(X)[:,0], y).item()
 
 print('Supervised source baseline:',
     acc(train_worstcase([(X_source, y_source)]), X_source, y_source))

@@ -5,24 +5,19 @@ the norm of each point and then aligning the PCs.
 Result: it works, but it doesn't scale well past ~8 principal components.
 """
 
-import numpy as np
-import torch
-from torch import nn, optim, autograd
-from lib import utils, ops, datasets, pca
-import torch.nn.functional as F
 import lib
+import torch
 import tqdm
-from scipy.stats import ortho_group
 
 N_PCA = 8
 
 errors = []
 for _ in tqdm.tqdm(range(100)):
-    X, _ = datasets.mnist()
+    X, _ = lib.datasets.mnist()
 
-    X = pca.PCA(X, N_PCA, whiten=True).forward(X)
+    X = lib.pca.PCA(X, N_PCA, whiten=True).forward(X)
 
-    T_groundtruth = torch.tensor(ortho_group.rvs(N_PCA)).float().cuda()
+    T_groundtruth = lib.ops.random_orthogonal_matrix(N_PCA)
     X_source = X[::2]
     X_target = X[1::2] @ T_groundtruth.T
 
@@ -32,8 +27,8 @@ for _ in tqdm.tqdm(range(100)):
     X_source_transformed = transform(X_source)
     X_target_transformed = transform(X_target)
 
-    source_pca = pca.PCA(X_source_transformed, N_PCA, whiten=True)
-    target_pca = pca.PCA(X_target_transformed, N_PCA, whiten=True)
+    source_pca = lib.pca.PCA(X_source_transformed, N_PCA, whiten=True)
+    target_pca = lib.pca.PCA(X_target_transformed, N_PCA, whiten=True)
     As = source_pca.components[:X_source.shape[1], :]
     At = target_pca.components[:X_source.shape[1], :]
 
@@ -41,8 +36,8 @@ for _ in tqdm.tqdm(range(100)):
     X_source_pca = source_pca.forward(X_source_transformed)
     X_target_pca = target_pca.forward(X_target_transformed)
     for i in range(N_PCA):
-        d_unflipped = ops.wasserstein_1d(X_source_pca[:, i], X_target_pca[:, i])
-        d_flipped = ops.wasserstein_1d(X_source_pca[:, i], -X_target_pca[:, i])
+        d_unflipped = lib.ops.wasserstein_1d(X_source_pca[:, i], X_target_pca[:, i])
+        d_flipped = lib.ops.wasserstein_1d(X_source_pca[:, i], -X_target_pca[:, i])
         if d_flipped < d_unflipped:
             At[:, i] *= -1
 

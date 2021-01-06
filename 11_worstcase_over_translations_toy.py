@@ -11,12 +11,10 @@ translation.
 
 Result: it works!
 """
-
+import lib
 import numpy as np
 import torch
-from torch import nn, optim, autograd
-import lib
-from lib import ops, utils, datasets, adversarial_translation
+from torch import nn, optim
 
 DATASET_SIZE = 10*1000
 N_TRANSLATIONS = 64
@@ -48,7 +46,7 @@ X_target, y_target = make_dataset('target')
 
 # Step 1: Learn many translations.
 
-translations, divergences = adversarial_translation.train(
+translations, divergences = lib.adversarial.train_translation(
     X_source, X_target, N_TRANSLATIONS,
     lambda_gp=TRANSLATION_LAMBDA_GP,
     lr_g=TRANSLATION_LR_G,
@@ -63,18 +61,18 @@ translations = translations[best_indices].detach()
 
 predictor = nn.Linear(X_source.shape[1], 1).cuda()
 def forward():
-    Xs, ys = ops.get_batch([X_source, y_source], PREDICTION_BATCH_SIZE)
+    Xs, ys = lib.ops.get_batch([X_source, y_source], PREDICTION_BATCH_SIZE)
     Xs = Xs[None,:,:].expand(translations.shape[0], -1, -1)
     ys = ys[None,:].expand(translations.shape[0], -1)
     Xs_translated = torch.bmm(Xs, translations.permute(0,2,1))
     losses = (predictor(Xs_translated)[:,:,0] - ys).pow(2).mean(dim=1)
     return losses.max()
 opt = optim.Adam(predictor.parameters(), lr=PREDICTION_LR)
-utils.train_loop(forward, opt, lr=PREDICTION_LR, PREDICTION_STEPS)
+lib.utils.train_loop(forward, opt, PREDICTION_STEPS, lr=PREDICTION_LR)
 
 # Step 4: Final evaluation on the target distribution
 
 test_loss = (predictor(X_target)[:,0] - y_target).pow(2).mean()
 print('test loss', test_loss)
-utils.print_tensor('predictor.weight', predictor.weight)
-utils.print_tensor('predictor.bias', predictor.bias)
+lib.utils.print_tensor('predictor.weight', predictor.weight)
+lib.utils.print_tensor('predictor.bias', predictor.bias)

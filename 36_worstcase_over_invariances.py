@@ -1,35 +1,26 @@
 """
-Basically just the inner-loop of Algorithm 3.
+'Worst-case Over Invariances' algorithm on Colored MNIST.
 """
 
-import numpy as np
-import torch
-from torch import nn, optim, autograd
-import torch.nn.functional as F
 import lib
-from lib import (ops, utils, datasets, pca, adversarial_translation,
-    hparam_search)
 import argparse
-import geomloss
-import time
-import sys
-import copy
-from typing import List
-import collections
+import torch
+import torch.nn.functional as F
+from torch import nn, optim
 
 BATCH_SIZE = 1024
 DISC_DIM = 512
 N_INVARIANCES = 64
-N_TOP = 8
+N_TOP = 64
 PCA_DIM = 128
 STEPS = 10001
 DEFAULT_HPARAMS = {
     'lr_g': 1e-3,
     'lr_d': 5e-4,
-    'lambda_erm': 5.0,
+    'lambda_erm': 0.1,
     'lambda_gp': 10.0,
     'lambda_orth': 0.01,
-    'weight_decay_d': 1e-5
+    'l2reg_d': 1e-5
 }
 
 parser = argparse.ArgumentParser()
@@ -47,7 +38,7 @@ def loss_wrt_invariance(invariance_logits, classifier_logits):
     result: (n_instances,)
     """
     invariance_probs = F.softmax(invariance_logits, dim=-1)
-    result = ops.softmax_cross_entropy(classifier_logits, invariance_probs)
+    result = lib.ops.softmax_cross_entropy(classifier_logits, invariance_probs)
     return result.mean(dim=1)
 
 def trial_fn(**hparams):
@@ -55,25 +46,26 @@ def trial_fn(**hparams):
     for k,v in sorted(hparams.items()):
         print(f'\t{k}: {v}')
 
-    X_source, y_source, X_target, y_target = datasets.colored_mnist()
+    X_source, y_source, X_target, y_target = lib.datasets.colored_mnist()
 
-    source_pca = pca.PCA(X_source, PCA_DIM, whiten=True)
-    target_pca = pca.PCA(X_target, PCA_DIM, whiten=True)
+    source_pca = lib.pca.PCA(X_source, PCA_DIM, whiten=True)
+    target_pca = lib.pca.PCA(X_target, PCA_DIM, whiten=True)
     X_source = source_pca.forward(X_source)
     X_target = target_pca.forward(X_target)
 
     # Apply random orthogonal transforms for optimization reasons.
-    W1 = ops.random_orthogonal_matrix(PCA_DIM)
-    W2 = ops.random_orthogonal_matrix(PCA_DIM)
+    W1 = lib.ops.random_orthogonal_matrix(PCA_DIM)
+    W2 = lib.ops.random_orthogonal_matrix(PCA_DIM)
     X_source = X_source @ W1.T
     X_target = X_target @ W2.T
 
 
     source_rep, target_rep, dann_classifier, divergences, accs = (
-        adversarial_translation.dann(
+        lib.adversarial.train_dann(
             X_source, y_source, X_target, y_target, N_INVARIANCES,
             batch_size=BATCH_SIZE,
             disc_dim=DISC_DIM,
+            linear_classifier=True,
             steps=STEPS,
             z_dim=args.z_dim,
             **hparams))
@@ -100,9 +92,10 @@ def trial_fn(**hparams):
     def forward():
         classifier_logits = classifier(X_target[None,:,:])
         return loss_wrt_invariance(invariance_logits, classifier_logits).max()
-    utils.train_loop(forward, optim.Adam(classifier.parameters()), 10001)
 
-    test_acc = ops.multiclass_accuracy(classifier(X_target), y_target).mean()
+    lib.utils.train_loop(forward, optim.Adam(classifier.parameters()), 10001)
+
+    test_acc = lib.ops.multiclass_accuracy(classifier(X_target),y_target).mean()
     print(f'Test acc: {test_acc}')
 
     return test_acc

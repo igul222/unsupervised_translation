@@ -10,12 +10,8 @@ Result: The fixed-angle-rotation case fails (a single translation is returned),
 but the other cases identify the subspace nicely.
 """
 
-import numpy as np
-import sklearn.decomposition
-import tensorly as tl
-import tensorly.decomposition
-from lib import ops, utils, pca, tensor_decomp
 import lib
+import numpy as np
 import os
 import sys
 import torch
@@ -61,56 +57,56 @@ for name, X_source in toy_examples:
     print(f'Toy example: {name}')
 
     # Whiten X_source
-    source_pca = pca.PCA(X_source, 2, whiten=True)
+    source_pca = lib.pca.PCA(X_source, 2, whiten=True)
     X_source = source_pca.forward(X_source)
 
     # Ground-truth orthogonal translation T
-    T_groundtruth = ops.random_orthogonal_matrix(2)
+    T_groundtruth = lib.ops.random_orthogonal_matrix(2)
     X_target = X_source @ T_groundtruth.T
 
     # Independent samples in each distribution
     X_source = X_source[::2]
     X_target = X_target[1::2]
 
-    Ms = tensor_decomp.third_moment(X_source)
-    Mt = tensor_decomp.third_moment(X_target)
+    Ms = lib.tensor_decomp.third_moment(X_source)
+    Mt = lib.tensor_decomp.third_moment(X_target)
 
     print('PARAFAC:')
 
     for rank in range(1, 11):
-        _, _, _, _, error = tensor_decomp.decomp(Ms, rank)
+        _, _, _, _, error = lib.tensor_decomp.decomp(Ms, rank)
         if error < 1e-2:
             break
 
-    ws, As, Bs, Cs, _ = tensor_decomp.decomp(Ms, rank)
-    wt, At, Bt, Ct, _ = tensor_decomp.decomp(Mt, rank)
+    ws, As, Bs, Cs, _ = lib.tensor_decomp.decomp(Ms, rank)
+    wt, At, Bt, Ct, _ = lib.tensor_decomp.decomp(Mt, rank)
 
-    utils.print_tensor('ws', ws)
-    utils.print_tensor('wt', wt)
-    utils.print_tensor('As', As)
-    utils.print_tensor('At', At)
+    lib.utils.print_tensor('ws', ws)
+    lib.utils.print_tensor('wt', wt)
+    lib.utils.print_tensor('As', As)
+    lib.utils.print_tensor('At', At)
 
     # We should have that At = T As
     T_hat = At @ torch.pinverse(As)
-    utils.print_tensor('T_groundtruth.T @ T_hat (should be identity)',
+    lib.utils.print_tensor('T_groundtruth.T @ T_hat (should be identity)',
         T_groundtruth.T @ T_hat)
 
     print('Symmetric PARAFAC:')
 
     for rank in range(1, 11):
-        _, _, error = tensor_decomp.symmetric_decomp(Ms, rank)
+        _, _, error = lib.tensor_decomp.symmetric_decomp(Ms, rank)
         if error < 1e-2:
             break
 
-    utils.print_tensor('ws', ws)
-    utils.print_tensor('wt', wt)
-    utils.print_tensor('As', As)
-    utils.print_tensor('At', At)
+    lib.utils.print_tensor('ws', ws)
+    lib.utils.print_tensor('wt', wt)
+    lib.utils.print_tensor('As', As)
+    lib.utils.print_tensor('At', At)
 
-    ws, As, _ = tensor_decomp.symmetric_decomp(Ms, rank)
-    wt, At, _ = tensor_decomp.symmetric_decomp(Mt, rank)
+    ws, As, _ = lib.tensor_decomp.symmetric_decomp(Ms, rank)
+    wt, At, _ = lib.tensor_decomp.symmetric_decomp(Mt, rank)
 
     # We should have that At = T As
     T_hat = At @ torch.pinverse(As)
-    utils.print_tensor('T_groundtruth.T @ T_hat (should be identity)',
+    lib.utils.print_tensor('T_groundtruth.T @ T_hat (should be identity)',
         T_groundtruth.T @ T_hat)
