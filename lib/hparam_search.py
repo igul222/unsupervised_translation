@@ -32,7 +32,7 @@ def _random_search(description, trial_fn, default_hparams, std, n_trials):
             best_score = score
             best_hparams = trial_hparams
 
-        # print('Score:', score)
+        print('Score:', score)
         print('-'*80)
     return best_hparams
 
