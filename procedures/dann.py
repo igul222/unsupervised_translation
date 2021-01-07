@@ -11,6 +11,7 @@ def make_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--batch_size', type=int, default=512)
     parser.add_argument('--dataset', type=str, default='colored_mnist')
+    parser.add_argument('--detach_Zs', action='store_true')
     parser.add_argument('--disc_dim', type=int, default=512)
     parser.add_argument('--hparam_search', action='store_true')
     parser.add_argument('--l2reg_c', type=float, default=0.)
@@ -56,6 +57,7 @@ def main(args):
             _, _, _, _, target_accs = lib.adversarial.train_dann(
                 X_source, y_source, X_target, y_target, args.n_instances,
                 batch_size=args.batch_size,
+                detach_Zs=args.detach_Zs,
                 disc_dim=args.disc_dim,
                 steps=args.steps,
                 z_dim=args.z_dim,
@@ -68,6 +70,7 @@ def main(args):
         lib.adversarial.train_dann(
             X_source, y_source, X_target, y_target, args.n_instances,
             batch_size=args.batch_size,
+            detach_Zs=args.detach_Zs,
             disc_dim=args.disc_dim,
             steps=args.steps,
             z_dim=args.z_dim,

@@ -32,9 +32,12 @@ def make_disc(dim_in, disc_dim, n_instances):
         lib.ops.MultipleLinear(disc_dim, 1, n_instances, init='xavier')
     ).cuda()
 
-def gan_loss_and_gp(Zs, Zt, disc):
+def gan_loss_and_gp(Zs, Zt, disc, detach_Zs):
     # Gradient reversal trick
-    Zs = (Zs.detach()*2) - Zs
+    if detach_Zs:
+        Zs = Zs.detach().requires_grad_()
+    else:
+        Zs = (Zs.detach()*2) - Zs
     Zt = (Zt.detach()*2) - Zt
 
     disc_s = disc(Zs)
@@ -52,6 +55,7 @@ def gan_loss_and_gp(Zs, Zt, disc):
 
     return disc_loss, grad_penalty
 
+# print('WARNING ZS DETACH')
 def wgangp_loss_and_gp(Zs, Zt, disc):
     # Gradient reversal trick
     Zs = (Zs.detach()*2) - Zs
@@ -89,6 +93,7 @@ LOSS_AND_GP_FNS = {
 def train_dann(
     X_source, y_source, X_target, y_target, n_instances,
     batch_size,
+    detach_Zs,
     disc_dim,
     l2reg_c,
     l2reg_d,
@@ -133,7 +138,7 @@ def train_dann(
         Zs = source_rep(Xs)
         Zt = target_rep(Xt)
 
-        disc_loss, grad_penalty = gan_loss_and_gp(Zs, Zt, disc)
+        disc_loss, grad_penalty = gan_loss_and_gp(Zs, Zt, disc, detach_Zs)
         erm_loss = F.cross_entropy(classifier(Zs).permute(0,2,1), ys,
             reduction='none').mean(dim=1).sum(dim=0)
         orth_penalty = (calculate_orth_penalty(source_rep.weight)
