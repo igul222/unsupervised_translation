@@ -85,6 +85,8 @@ def train_loop(forward, opt, steps, history_names=[], hook=None,
         scaler.scale(forward_vals[0]).backward()
         scaler.step(opt)
         scaler.update()
+        # forward_vals[0].backward()
+        # opt.step()
 
         histories['loss'].append(forward_vals[0].item())
         for name, val in zip(history_names, forward_vals[1:]):

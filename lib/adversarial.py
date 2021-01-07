@@ -46,10 +46,11 @@ def gan_loss_and_gp(Zs, Zt, disc):
     targets = torch.zeros((1, 2*Zs.shape[1], 1), device='cuda')
     targets[:, :Zs.shape[1], :] += 1
     targets = targets.expand(Zs.shape[0], -1, -1)
-    disc_loss = F.binary_cross_entropy_with_logits(disc_out, targets)
+    disc_loss = F.binary_cross_entropy_with_logits(disc_out, targets,
+        reduction='none').mean(dim=[1,2]).sum()
 
     grad = autograd.grad([disc_out.sum()], [Zs], create_graph=True)[0]
-    grad_penalty = grad.square().sum(dim=2).mean()
+    grad_penalty = grad.square().sum(dim=2).mean(dim=1).sum(dim=0)
 
     return disc_loss, grad_penalty
 
@@ -75,7 +76,7 @@ def wgangp_loss_and_gp(Zs, Zt, disc):
 def calculate_orth_penalty(W):
     eye = torch.eye(W.shape[1], device='cuda')[None,:,:]
     WWT = torch.bmm(W, W.permute(0,2,1))
-    return (WWT - eye).square().sum(dim=[1,2]).mean()
+    return (WWT - eye).square().sum(dim=[1,2]).sum()
 
 OPT_BETAS = {
     'gan': (0.5, 0.99),
@@ -135,7 +136,8 @@ def train_dann(
         Zt = target_rep(Xt)
 
         disc_loss, grad_penalty = gan_loss_and_gp(Zs, Zt, disc)
-        erm_loss = F.cross_entropy(classifier(Zs).permute(0,2,1), ys)
+        erm_loss = F.cross_entropy(classifier(Zs).permute(0,2,1), ys,
+            reduction='none').mean(dim=1).sum(dim=0)
         orth_penalty = (calculate_orth_penalty(source_rep.weight)
             + calculate_orth_penalty(target_rep.weight))
         with torch.no_grad():
@@ -149,10 +151,11 @@ def train_dann(
             + (lambda_erm * erm_loss)
             + (lambda_gp * grad_penalty)
             + (lambda_orth * orth_penalty)
-        ) * n_instances
+        )
 
-        return (loss, disc_loss, erm_loss, grad_penalty, orth_penalty, 
-            energy_dist, source_acc, target_acc)
+        ni = float(n_instances)
+        return (loss, disc_loss/ni, erm_loss/ni, grad_penalty/ni,
+            orth_penalty/ni, energy_dist, source_acc, target_acc)
 
     lib.utils.train_loop(
         forward, opt, steps,
