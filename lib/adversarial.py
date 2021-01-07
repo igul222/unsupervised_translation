@@ -37,8 +37,6 @@ def gan_loss_and_gp(Zs, Zt, disc):
     Zs = (Zs.detach()*2) - Zs
     Zt = (Zt.detach()*2) - Zt
 
-    # disc_in = torch.cat([Zs, Zt], dim=1)
-    # disc_out = disc(disc_in)
     disc_s = disc(Zs)
     disc_t = disc(Zt)
     disc_out = torch.cat([disc_s, disc_t], dim=1)
