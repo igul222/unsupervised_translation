@@ -19,17 +19,17 @@ def _loss_wrt_invariance(invariance_logits, classifier_logits):
     result = lib.ops.softmax_cross_entropy(classifier_logits, invariance_probs)
     return result.mean(dim=1)
 
-def top_4(
+def top_8(
     classifier,
     divergences,
     target_rep,
     X_target,
     y_target):
     """
-    Return the mean aaccuracy of the top 4 classifiers (by divergence).
+    Return the mean aaccuracy of the top 8 classifiers (by divergence).
     """
     n_instances = len(divergences)
-    best = torch.argsort(divergences)[:4]
+    best = torch.argsort(divergences)[:8]
     Xt = X_target.expand(n_instances, -1, -1)
     logits = classifier(target_rep(Xt))[best]
     return lib.ops.multiclass_accuracy(logits, y_target).mean()
@@ -113,7 +113,7 @@ def expectation(
 
 REGISTRY = collections.OrderedDict([
     ('random', random),
-    ('top_4', top_4),
+    ('top_8', top_8),
     ('worstcase', worstcase),
     ('expectation', expectation)
 ])
