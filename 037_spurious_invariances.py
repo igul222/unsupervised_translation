@@ -32,10 +32,9 @@ W_source = nn.Linear(PCA_DIM, 2).cuda()
 def forward():
     Z_source = W_source(X_source)
     return F.cross_entropy(Z_source, y_source)
-    source_acc = lib.ops.multiclass_accuracy(Z_source, y_source).mean()
 
 opt = optim.Adam(W_source.parameters())
-lib.utils.train_loop(forward, opt, 3001)
+lib.utils.train_loop(forward, opt, STEPS)
 Z_source = W_source(X_source).detach()
 
 def plot(name, Z_source, Z_target):
@@ -66,7 +65,7 @@ W_target = nn.Linear(PCA_DIM, 2).cuda()
 def forward():
     Z_target = W_target(X_target)
     target_acc = lib.ops.multiclass_accuracy(Z_target, y_target).mean()
-    energy_dist = lib.ops.fast_energy_dist(Z_source, Z_target)
+    energy_dist = lib.energy_dist.energy_dist(Z_source, Z_target)
     cross_entropy = F.cross_entropy(Z_target, 1-y_target)
     loss = energy_dist + (0.01*cross_entropy)
     return loss, energy_dist, cross_entropy, target_acc
