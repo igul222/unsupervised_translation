@@ -113,8 +113,10 @@ def train_dann(
         target_rep = lib.networks.multi_mlp(n_instances, X_target.shape[1],
             z_dim, 128, 1)
     elif rep_network == 'cnn':
-        source_rep = lib.networks.MultiCNN(n_instances).cuda()
-        target_rep = lib.networks.MultiCNN(n_instances).cuda()
+        source_channels = X_source.shape[1] // 784
+        target_channels = X_target.shape[1] // 784
+        source_rep = lib.networks.MultiCNN(n_instances, source_channels).cuda()
+        target_rep = lib.networks.MultiCNN(n_instances, target_channels).cuda()
         z_dim = 32*7*7
 
     classifier = lib.networks.multi_mlp(n_instances, z_dim,

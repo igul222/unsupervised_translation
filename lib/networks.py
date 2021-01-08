@@ -44,13 +44,13 @@ class MultipleConv(nn.Module):
         return x
 
 class MultiCNN(nn.Module):
-    def __init__(self, n_instances):
+    def __init__(self, n_instances, in_channels):
         super().__init__()
-        self.conv1 = MultipleConv(n_instances, 2, 16, 5)
+        self.conv1 = MultipleConv(n_instances, in_channels, 16, 5)
         self.conv2 = MultipleConv(n_instances, 16, 32, 5)
     def forward(self,x):
-        assert(x.shape[2] == 2*784)
-        x = x.view(x.shape[0], x.shape[1], 28, 28, 2)
+        assert(x.shape[2] % 784 == 0)
+        x = x.view(x.shape[0], x.shape[1], 28, 28, -1)
         n, b, h, w, c = x.shape
         x = x.permute(1,0,4,2,3).contiguous()
         x = self.conv1(x)
@@ -58,5 +58,6 @@ class MultiCNN(nn.Module):
         x = self.conv2(x)
         x = torch.nn.functional.relu(x, inplace=True)
         x = x.permute(1,0,3,4,2).contiguous()
+        n, b, h, w, c = x.shape
         x = x.view(n, b, h*w*c)
         return x
