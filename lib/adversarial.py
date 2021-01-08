@@ -24,13 +24,7 @@ def calculate_divergences(Zs, Zt):
     ])
 
 def make_disc(dim_in, disc_dim, n_instances):
-    return nn.Sequential(
-        lib.ops.MultipleLinear(dim_in, disc_dim, n_instances,init='xavier'),
-        nn.ReLU(),
-        lib.ops.MultipleLinear(disc_dim, disc_dim, n_instances, init='xavier'),
-        nn.ReLU(),
-        lib.ops.MultipleLinear(disc_dim, 1, n_instances, init='xavier')
-    ).cuda()
+    return lib.networks.multi_mlp(n_instances, dim_in, 1, disc_dim, 2)
 
 def gan_loss_and_gp(Zs, Zt, disc, detach_Zs):
     # Gradient reversal trick
@@ -55,7 +49,6 @@ def gan_loss_and_gp(Zs, Zt, disc, detach_Zs):
 
     return disc_loss, grad_penalty
 
-# print('WARNING ZS DETACH')
 def wgangp_loss_and_gp(Zs, Zt, disc):
     # Gradient reversal trick
     Zs = (Zs.detach()*2) - Zs
@@ -92,11 +85,13 @@ LOSS_AND_GP_FNS = {
 
 def train_dann(
     X_source, y_source, X_target, y_target, n_instances,
+    rep_network,
     batch_size,
     detach_Zs,
     disc_dim,
     l2reg_c,
     l2reg_d,
+    l2reg_r,
     lambda_erm,
     lambda_gp,
     lambda_orth,
@@ -107,21 +102,25 @@ def train_dann(
 
     print('DANN:')
 
-    source_rep = lib.ops.MultipleLinear(X_source.shape[1], z_dim,
-        n_instances, bias=False).cuda()
-    target_rep = lib.ops.MultipleLinear(X_target.shape[1], z_dim,
-        n_instances, bias=False).cuda()
-    classifier = nn.Sequential(
-        lib.ops.MultipleLinear(z_dim, 128, n_instances),
-        nn.ReLU(),
-        lib.ops.MultipleLinear(128, int(y_source.max()+1), n_instances)
-    ).cuda()
+    if rep_network == 'linear':
+        source_rep = lib.ops.MultipleLinear(X_source.shape[1], z_dim,
+            n_instances, bias=False).cuda()
+        target_rep = lib.ops.MultipleLinear(X_target.shape[1], z_dim,
+            n_instances, bias=False).cuda()
+    elif rep_network == 'mlp':
+        source_rep = lib.networks.multi_mlp(n_instances, X_source.shape[1],
+            z_dim, 128, 1)
+        target_rep = lib.networks.multi_mlp(n_instances, X_target.shape[1],
+            z_dim, 128, 1)
+    classifier = lib.networks.multi_mlp(n_instances, z_dim,
+        int(y_source.max()+1), 128, 1)
     disc = make_disc(z_dim, disc_dim, n_instances)
 
     rep_params = list(source_rep.parameters()) + list(target_rep.parameters())
     opt = optim.Adam([{
             'params': rep_params,
-            'lr': lr_g
+            'lr': lr_g,
+            'weight_decay': l2reg_r
         }, {
             'params': classifier.parameters(),
             'lr': lr_g,
@@ -141,8 +140,11 @@ def train_dann(
         disc_loss, grad_penalty = gan_loss_and_gp(Zs, Zt, disc, detach_Zs)
         erm_loss = F.cross_entropy(classifier(Zs).permute(0,2,1), ys,
             reduction='none').mean(dim=1).sum(dim=0)
-        orth_penalty = (calculate_orth_penalty(source_rep.weight)
-            + calculate_orth_penalty(target_rep.weight))
+        if rep_network == 'linear':
+            orth_penalty = (calculate_orth_penalty(source_rep.weight)
+                + calculate_orth_penalty(target_rep.weight))
+        else:
+            orth_penalty = torch.tensor(0., device='cuda')
         with torch.no_grad():
             energy_dist = lib.energy_dist.energy_dist(Zs, Zt, unbiased=True)
             energy_dist = energy_dist.mean()

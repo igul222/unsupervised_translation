@@ -16,6 +16,7 @@ def make_args():
     parser.add_argument('--hparam_search', action='store_true')
     parser.add_argument('--l2reg_c', type=float, default=0.)
     parser.add_argument('--l2reg_d', type=float, default=0.)
+    parser.add_argument('--l2reg_r', type=float, default=0.)
     parser.add_argument('--lambda_erm', type=float, default=1.0)
     parser.add_argument('--lambda_gp', type=float, default=1.0)
     parser.add_argument('--lambda_orth', type=float, default=0.1)
@@ -23,6 +24,7 @@ def make_args():
     parser.add_argument('--lr_g', type=float, default=1e-3)
     parser.add_argument('--n_instances', type=int, default=16)
     parser.add_argument('--pca_dim', type=int, default=128)
+    parser.add_argument('--rep_network', type=str, default='linear')
     parser.add_argument('--steps', type=int, default=100001)
     parser.add_argument('--unwhitened', action='store_true')
     parser.add_argument('--z_dim', type=int, default=32)
@@ -36,6 +38,7 @@ def main(args):
     hparams = {
         'l2reg_c': args.l2reg_c,
         'l2reg_d': args.l2reg_d,
+        'l2reg_r': args.l2reg_r,
         'lambda_erm': args.lambda_erm,
         'lambda_gp': args.lambda_gp,
         'lambda_orth': args.lambda_orth,
@@ -59,6 +62,7 @@ def main(args):
                 batch_size=args.batch_size,
                 detach_Zs=args.detach_Zs,
                 disc_dim=args.disc_dim,
+                rep_network=args.rep_network,
                 steps=args.steps,
                 z_dim=args.z_dim,
                 **hparams
@@ -72,6 +76,7 @@ def main(args):
             batch_size=args.batch_size,
             detach_Zs=args.detach_Zs,
             disc_dim=args.disc_dim,
+            rep_network=args.rep_network,
             steps=args.steps,
             z_dim=args.z_dim,
             **hparams
