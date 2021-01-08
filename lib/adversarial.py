@@ -112,6 +112,11 @@ def train_dann(
             z_dim, 128, 1)
         target_rep = lib.networks.multi_mlp(n_instances, X_target.shape[1],
             z_dim, 128, 1)
+    elif rep_network == 'cnn':
+        source_rep = lib.networks.MultiCNN(n_instances).cuda()
+        target_rep = lib.networks.MultiCNN(n_instances).cuda()
+        z_dim = 32*7*7
+
     classifier = lib.networks.multi_mlp(n_instances, z_dim,
         int(y_source.max()+1), 128, 1)
     disc = make_disc(z_dim, disc_dim, n_instances)
@@ -165,19 +170,21 @@ def train_dann(
     lib.utils.train_loop(
         forward, opt, steps,
         history_names=['disc_loss', 'erm_loss', 'grad_penalty', 'orth_penalty',
-            'energy_dist', 'source_acc', 'target_acc'])
+            'energy_dist', 'source_acc', 'target_acc'], print_freq=100)
 
     with torch.no_grad():
         Xs = X_source[None,:,:].expand(n_instances,-1,-1)
         Xt = X_target[None,:,:].expand(n_instances,-1,-1)
         ys = y_source[None,:].expand(n_instances,-1)
         yt = y_target[None,:].expand(n_instances,-1)
-        Zs = source_rep(Xs)
+        # Temporarily move Zs off of GPU memory while computing Zt
+        Zs = source_rep(Xs).cpu()
         Zt = target_rep(Xt)
+        Zs = Zs.cuda()
         source_accs = lib.ops.multiclass_accuracy(
-            classifier(source_rep(Xs)), ys).mean(dim=1)
+            classifier(Zs), ys).mean(dim=1)
         target_accs = lib.ops.multiclass_accuracy(
-            classifier(target_rep(Xt)), yt).mean(dim=1)
+            classifier(Zt), yt).mean(dim=1)
     divergences = calculate_divergences(Zs, Zt)
 
     lib.utils.print_row('instance', 'divergence', 'source acc', 'target acc')

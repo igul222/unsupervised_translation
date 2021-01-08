@@ -28,11 +28,12 @@ def top_4(
     """
     Return the mean aaccuracy of the top 4 classifiers (by divergence).
     """
-    n_instances = len(divergences)
-    best = torch.argsort(divergences)[:4]
-    Xt = X_target.expand(n_instances, -1, -1)
-    logits = classifier(target_rep(Xt))[best]
-    return lib.ops.multiclass_accuracy(logits, y_target).mean()
+    with torch.no_grad():
+        n_instances = len(divergences)
+        best = torch.argsort(divergences)[:4]
+        Xt = X_target.expand(n_instances, -1, -1)
+        logits = classifier(target_rep(Xt))[best]
+        return lib.ops.multiclass_accuracy(logits, y_target).mean()
 
 def random(
     classifier,
@@ -44,10 +45,11 @@ def random(
     Return the expected accuracy of picking an invariance randomly (i.e. the
     mean accuracy across all classifiers).
     """
-    n_instances = len(divergences)
-    Xt = X_target.expand(n_instances, -1, -1)
-    logits = classifier(target_rep(Xt))
-    return lib.ops.multiclass_accuracy(logits, y_target[None,:]).mean()
+    with torch.no_grad():
+        n_instances = len(divergences)
+        Xt = X_target.expand(n_instances, -1, -1)
+        logits = classifier(target_rep(Xt))
+        return lib.ops.multiclass_accuracy(logits, y_target[None,:]).mean()
 
 def worstcase(
     classifier,
@@ -59,26 +61,27 @@ def worstcase(
     Return the accuracy of a classifier trained to minimize worst-case error
     over the top half of invariances (by divergence).
     """
-    n_instances = len(divergences)
+    with torch.no_grad():
+        n_instances = len(divergences)
 
-    Xt = X_target.expand(n_instances, -1, -1)
-    invariance_logits = classifier(target_rep(Xt))
+        Xt = X_target.expand(n_instances, -1, -1)
+        invariance_logits = classifier(target_rep(Xt))
 
-    n_top = n_instances // 2
-    best = torch.argsort(divergences)[:n_top]
-    invariance_logits = invariance_logits[best,:,:].clone().detach()
+        n_top = n_instances // 2
+        best = torch.argsort(divergences)[:n_top]
+        invariance_logits = invariance_logits[best,:,:].clone().detach()
 
-    matrix = torch.zeros((n_top, n_top)).cuda()
-    for i in range(n_top):
-        for j in range(n_top):
-            matrix[i, j] = _loss_wrt_invariance(
-                invariance_logits[i][None,:],
-                invariance_logits[j][None,:]
-            )[0].detach()
-    # (i,j)th entry is the cross-entropy of classifier j wrt the
-    # predictive distribution of classifier i
-    print('Invariance classifier cross-entropies:')
-    print(matrix)
+        matrix = torch.zeros((n_top, n_top)).cuda()
+        for i in range(n_top):
+            for j in range(n_top):
+                matrix[i, j] = _loss_wrt_invariance(
+                    invariance_logits[i][None,:],
+                    invariance_logits[j][None,:]
+                )[0].detach()
+        # (i,j)th entry is the cross-entropy of classifier j wrt the
+        # predictive distribution of classifier i
+        print('Invariance classifier cross-entropies:')
+        print(matrix)
 
     classifier = nn.Sequential(
         nn.Linear(X_target.shape[1], 128),
@@ -106,10 +109,11 @@ def expectation(
     Return the accuracy of the classifier which averages the predictions of
     all of the invariance classifiers.
     """
-    n_instances = len(divergences)
-    Xt = X_target.expand(n_instances, -1, -1)
-    preds = F.softmax(classifier(target_rep(Xt)), dim=2)
-    return lib.ops.multiclass_accuracy(preds.mean(dim=0), y_target).mean()
+    with torch.no_grad():
+        n_instances = len(divergences)
+        Xt = X_target.expand(n_instances, -1, -1)
+        preds = F.softmax(classifier(target_rep(Xt)), dim=2)
+        return lib.ops.multiclass_accuracy(preds.mean(dim=0), y_target).mean()
 
 REGISTRY = collections.OrderedDict([
     ('random', random),

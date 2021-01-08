@@ -48,12 +48,13 @@ def main(args):
 
     dataset_fn = lib.datasets.REGISTRY[args.dataset]
     X_source, y_source, X_target, y_target = dataset_fn()
-    X_source = lib.pca.PCA(X_source, args.pca_dim,
-        whiten=(not args.unwhitened)).forward(X_source)
-    X_target = lib.pca.PCA(X_target, args.pca_dim,
-        whiten=(not args.unwhitened)).forward(X_target)
-    X_source = X_source @ lib.ops.random_orthogonal_matrix(X_source.shape[1])
-    X_target = X_target @ lib.ops.random_orthogonal_matrix(X_target.shape[1])
+    if args.rep_network != 'cnn':
+        X_source = lib.pca.PCA(X_source, args.pca_dim,
+            whiten=(not args.unwhitened)).forward(X_source)
+        X_target = lib.pca.PCA(X_target, args.pca_dim,
+            whiten=(not args.unwhitened)).forward(X_target)
+        X_source = X_source @ lib.ops.random_orthogonal_matrix(X_source.shape[1])
+        X_target = X_target @ lib.ops.random_orthogonal_matrix(X_target.shape[1])
 
     if args.hparam_search:
         def trial_fn(**hparams):
