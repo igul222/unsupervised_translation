@@ -37,11 +37,9 @@ for REPR_DIM in [1, 8, 48, 63]:
 
         eye = torch.eye(REPR_DIM, device='cuda')
 
-        lib.utils.print_row('step', 'train_nll', 'train_acc', 'train_penalty',
-            'test_acc')
+        lib.utils.print_row('step', 'train_nll', 'train_acc', 'irm_penalty',
+            'orth_penalty', 'test_acc')
         for step in range(5001):
-            lib.utils.enforce_orthogonality(featurizer.weight)
-
             for env in envs:
                 feats = featurizer(env['images'])
                 ones = torch.ones((1, REPR_DIM), device='cuda')
@@ -55,12 +53,14 @@ for REPR_DIM in [1, 8, 48, 63]:
 
             train_nll = torch.stack([envs[0]['nll'], envs[1]['nll']]).mean()
             train_acc = torch.stack([envs[0]['acc'], envs[1]['acc']]).mean()
-            train_penalty = torch.stack([envs[0]['penalty'],
+            irm_penalty = torch.stack([envs[0]['penalty'],
                 envs[1]['penalty']]).mean()
+            orth_penalty = lib.ops.orthogonality_penalty(featurizer.weight)
 
             loss = train_nll.clone()
             loss /= LAMBDA # Keep gradients in a reasonable range
-            loss += train_penalty
+            loss += irm_penalty
+            loss += orth_penalty
 
             opt.zero_grad()
             loss.backward()
@@ -72,6 +72,7 @@ for REPR_DIM in [1, 8, 48, 63]:
                     step,
                     train_nll,
                     train_acc,
-                    train_penalty,
+                    irm_penalty,
+                    orth_penalty,
                     test_acc
                 )

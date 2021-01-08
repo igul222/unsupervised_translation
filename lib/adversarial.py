@@ -68,11 +68,6 @@ def wgangp_loss_and_gp(Zs, Zt, disc):
 
     return disc_loss, grad_penalty
 
-def calculate_orth_penalty(W):
-    eye = torch.eye(W.shape[1], device='cuda')[None,:,:]
-    WWT = torch.bmm(W, W.permute(0,2,1))
-    return (WWT - eye).square().sum(dim=[1,2]).sum()
-
 OPT_BETAS = {
     'gan': (0.5, 0.99),
     'wgan-gp': (0., 0.99)
@@ -148,8 +143,8 @@ def train_dann(
         erm_loss = F.cross_entropy(classifier(Zs).permute(0,2,1), ys,
             reduction='none').mean(dim=1).sum(dim=0)
         if rep_network == 'linear':
-            orth_penalty = (calculate_orth_penalty(source_rep.weight)
-                + calculate_orth_penalty(target_rep.weight))
+            orth_penalty = (lib.ops.orthogonality_penalty(source_rep.weight)
+                + lib.ops.orthogonality_penalty(target_rep.weight))
         else:
             orth_penalty = torch.tensor(0., device='cuda')
         with torch.no_grad():

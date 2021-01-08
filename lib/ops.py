@@ -74,3 +74,13 @@ class MultipleLinear(nn.Module):
 def softmax_cross_entropy(logits, targets):
     log_probs = F.log_softmax(logits, dim=-1)
     return -(targets * log_probs).sum(dim=-1)
+
+def orthogonality_penalty(W):
+    """
+    An orthogonality penalty for a weight matrix (or batch of weight matrices).
+    """
+    if len(W.shape) == 2:
+        W = W[None,:,:]
+    eye = torch.eye(W.shape[1], device='cuda')[None,:,:]
+    WWT = torch.bmm(W, W.permute(0,2,1))
+    return (WWT - eye).square().sum(dim=[1,2]).sum()
