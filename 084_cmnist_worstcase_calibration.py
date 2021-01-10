@@ -38,17 +38,19 @@ source_rep, target_rep, classifier, divergences, target_accs = (
     lib.adversarial.train_dann(
         X_source, y_source, X_target, y_target, N_INSTANCES,
         batch_size=1024,
+        detach_Zs=False,
         disc_dim=512,
-        linear_classifier=False,
         steps=STEPS,
         z_dim=32,
+        l2reg_r=0.,
         l2reg_c=1e-3,
         l2reg_d=1e-4,
         lambda_erm=1.0,
         lambda_gp=1.0,
         lambda_orth=0.1,
         lr_d=1e-3,
-        lr_g=1e-3))
+        lr_g=1e-3,
+        rep_network='linear'))
 
 Xt = X_target.expand(N_INSTANCES, -1, -1)
 invariance_logits = classifier(target_rep(Xt))

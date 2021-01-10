@@ -5,6 +5,7 @@ predictor.
 
 import collections
 import lib
+import numpy as np
 import torch
 import torch.nn.functional as F
 from torch import nn, optim
@@ -49,6 +50,16 @@ def random(
         n_instances = len(divergences)
         Xt = X_target.expand(n_instances, -1, -1)
         logits = classifier(target_rep(Xt))
+
+        expected_accs = []
+        for i in range(n_instances):
+            test_probs = F.softmax(logits[i], dim=1)
+            test_preds = torch.argmax(test_probs, dim=1)
+            arange = torch.arange(test_probs.shape[0])
+            expected_acc = test_probs[arange, test_preds].mean()
+            expected_accs.append(expected_acc.item())
+        print('"random" expected acc:', np.mean(expected_accs))
+
         return lib.ops.multiclass_accuracy(logits, y_target[None,:]).mean()
 
 def worstcase(
@@ -96,7 +107,13 @@ def worstcase(
     opt = optim.Adam(classifier.parameters())
     lib.utils.train_loop(forward, opt, 10001)
 
-    test_acc = lib.ops.multiclass_accuracy(classifier(X_target),y_target).mean()
+    with torch.no_grad():
+        test_probs = F.softmax(classifier(X_target), dim=1)
+        test_preds = torch.argmax(test_probs, dim=1)
+        arange = torch.arange(test_probs.shape[0])
+        expected_acc = test_probs[arange, test_preds].mean()
+        print('"worstcase" expected acc:', expected_acc.item())
+        test_acc = lib.ops.multiclass_accuracy(test_probs, y_target).mean()
     return test_acc
 
 def expectation(

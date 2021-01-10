@@ -167,7 +167,7 @@ def train_dann(
     lib.utils.train_loop(
         forward, opt, steps,
         history_names=['disc_loss', 'erm_loss', 'grad_penalty', 'orth_penalty',
-            'energy_dist', 'source_acc', 'target_acc'], print_freq=100)
+            'energy_dist', 'source_acc', 'target_acc'], print_freq=1000)
 
     with torch.no_grad():
         Xs = X_source[None,:,:].expand(n_instances,-1,-1)
